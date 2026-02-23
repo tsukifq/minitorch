@@ -264,8 +264,22 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 2.3.
-        raise NotImplementedError('Need to implement for Task 2.3')
+        out_index = np.zeros(len(out_shape), dtype=np.int32)
+        in_index = np.zeros(len(in_shape), dtype=np.int32)
+
+        for ordinal in range(int(np.prod(out_shape))):
+            # 1) 线性序号 -> out 的多维索引
+            to_index(ordinal, out_shape, out_index)
+
+            # 2) out 索引按广播规则映射到 in 索引
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+
+            # 3) 多维索引 -> storage 位置
+            out_pos = index_to_position(out_index, out_strides)
+            in_pos = index_to_position(in_index, in_strides)
+
+            # 4) 写回
+            out[out_pos] = fn(in_storage[in_pos])
 
     return _map
 
@@ -309,8 +323,25 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 2.3.
-        raise NotImplementedError('Need to implement for Task 2.3')
+        out_index = np.zeros(len(out_shape), dtype=np.int32)
+        a_index = np.zeros(len(a_shape), dtype=np.int32)
+        b_index = np.zeros(len(b_shape), dtype=np.int32)
+
+        for ordinal in range(int(np.prod(out_shape))):
+            # 1) 线性序号 -> out 的多维索引
+            to_index(ordinal, out_shape, out_index)
+
+            # 2) out 索引按广播规则映射到 a 索引和 b 索引
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+
+            # 3) 多维索引 -> storage 位置
+            out_pos = index_to_position(out_index, out_strides)
+            a_pos = index_to_position(a_index, a_strides)
+            b_pos = index_to_position(b_index, b_strides)
+
+            # 4) 写回
+            out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return _zip
 
@@ -340,8 +371,26 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # TODO: Implement for Task 2.3.
-        raise NotImplementedError('Need to implement for Task 2.3')
+        out_index = np.zeros(len(out_shape), dtype=np.int32)
+        a_index = np.zeros(len(a_shape), dtype=np.int32)
+
+        for ordinal in range(int(np.prod(out_shape))):
+            # 1) 线性序号 -> out 的多维索引
+            to_index(ordinal, out_shape, out_index)
+
+            # 2) out 索引映射到 a 索引
+            a_index[:] = out_index[:]
+            a_index[reduce_dim] = 0
+
+            # 3) 多维索引 -> storage 位置
+            out_pos = index_to_position(out_index, out_strides)
+            a_pos = index_to_position(a_index, a_strides)
+
+            # 4) reduce_dim 上迭代累积结果
+            acc = out[out_pos]
+            for i in range(a_shape[reduce_dim]):
+                acc = fn(acc, a_storage[a_pos + i * a_strides[reduce_dim]])
+            out[out_pos] = acc
 
     return _reduce
 

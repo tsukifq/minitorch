@@ -136,8 +136,8 @@ class Tensor:
 
     def _ensure_tensor(self, b: TensorLike) -> Tensor:
         "Turns a python number into a tensor with the same backend."
-        if isinstance(b, (int, float)):
-            c = Tensor.make([b], (1,), backend=self.backend)
+        if isinstance(b, (int, float, np.integer, np.floating)):
+            c = Tensor.make([float(b)], (1,), backend=self.backend)
         else:
             b._type_(self.backend)
             c = b
@@ -345,7 +345,8 @@ class Tensor:
 
     @property
     def parents(self) -> Iterable[Variable]:
-        assert self.history is not None
+        if self.history is None:
+            return ()
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
